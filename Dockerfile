@@ -1,14 +1,14 @@
 # -----------------------------
-# Etapa base: imatge oficial de Python
+# Base stage: official Python image
 # -----------------------------
 FROM python:3.10-slim
 
-# Evitem que Python escrigui fitxers .pyc i assegurem output immediat
+# Prevent Python from writing .pyc files and ensure immediate output
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # -----------------------------
-# Instal·lar dependències del sistema
+# Install system dependencies
 # -----------------------------
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -17,24 +17,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
-# Crear directori de treball
+# Create working directory
 # -----------------------------
 WORKDIR /app
 
 # -----------------------------
-# Copiar fitxers de dependències primer (per cache)
+# Copy dependency files first (for cache)
 # -----------------------------
 COPY requirements.txt .
 
-# Instal·lar dependències Python
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # -----------------------------
-# Copiar la resta del projecte
+# Copy the rest of the project
 # -----------------------------
 COPY . .
 
 # -----------------------------
-# Executar script ETL per defecte
+# Run ETL script by default
 # -----------------------------
 CMD ["python", "etl/etl_main.py"]

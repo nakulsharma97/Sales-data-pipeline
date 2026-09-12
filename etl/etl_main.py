@@ -18,7 +18,7 @@ def load(df, mysql_uri=None):
     if not mysql_uri:
         mysql_uri = os.environ.get('MYSQL_URI')
     if not mysql_uri:
-        raise ValueError("No MYSQL_URI provided (env MYSQL_URI o argument).")
+        raise ValueError("No MYSQL_URI provided (env MYSQL_URI or argument).")
     engine = create_engine(mysql_uri)
     df.to_sql('sales_staging', con=engine, if_exists='append', index=False)
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     print("Transformed sample:")
     print(df.head())
 
-    # Per carregar a MySQL (quan la BD estigui activa amb Docker Compose), 
-    # si no es vol carregar les dades a MySQL comentar les 2 línies següents:
+    # To load into MySQL (when the DB is running via Docker Compose),
+    # if you don't want to load data into MySQL, comment out the next 2 lines:
     load(df)
     print("Loaded data to MySQL")

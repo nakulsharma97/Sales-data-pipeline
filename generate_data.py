@@ -1,6 +1,6 @@
 """
-Script per generar un dataset sintètic de vendes per Bon Preu Demo.
-Crea un fitxer CSV amb 4000 registres entre les dates acotades (date, product, quantity, price).
+Script to generate a synthetic sales dataset for the Bon Preu Demo.
+Creates a CSV file with 4000 records within the bounded dates (date, product, quantity, price).
 """
 
 import numpy as np
@@ -11,7 +11,7 @@ import os
 def generate_dataset(output_path="data/input.csv", n_rows=4000, seed=42):
     np.random.seed(seed)
 
-    # Catàleg de productes (nom i preu base en €)
+    # Product catalog (name and base price in €)
     products = [
         ("Pa", 1.20),
         ("Llet", 0.95),
@@ -39,12 +39,12 @@ def generate_dataset(output_path="data/input.csv", n_rows=4000, seed=42):
         ("Paper higiènic", 0.45),
     ]
 
-    # Dates (gener - juny 2025)
+    # Dates (January - June 2025)
     start_date = datetime(2024, 1, 1)
     end_date = datetime(2025, 6, 30)
     days = (end_date - start_date).days + 1
 
-    # Generació de mostres
+    # Sample generation
     dates = [
         start_date + timedelta(days=int(x))
         for x in np.random.randint(0, days, size=n_rows)
@@ -60,10 +60,10 @@ def generate_dataset(output_path="data/input.csv", n_rows=4000, seed=42):
 
     df = pd.DataFrame(rows, columns=["date", "product", "quantity", "price"])
 
-    # Assegurem que existeix la carpeta data/
+    # Ensure the data/ folder exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
-    print(f"✅ Dataset generat: {output_path} ({len(df)} files)")
+    print(f"✅ Dataset generated: {output_path} ({len(df)} rows)")
 
 if __name__ == "__main__":
     generate_dataset()
