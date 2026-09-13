@@ -12,14 +12,16 @@ dist/
 build/
 .eggs/
 
-# Entorns virtuals
+# -----------------------------
+# Virtual environments
+# -----------------------------
 venv/
 ENV/
 env/
 .venv/
 
 # -----------------------------
-# Configuracions IDE/Editor
+# IDE/Editor configurations
 # -----------------------------
 .vscode/
 .idea/
@@ -40,13 +42,13 @@ Icon
 .gitignore
 
 # -----------------------------
-# Docker i CI/CD
+# Docker and CI/CD
 # -----------------------------
 docker-data/
 .github/
 
 # -----------------------------
-# Secrets i fitxers sensibles
+# Secrets and sensitive files
 # -----------------------------
 .env
 *.key
@@ -64,7 +66,7 @@ nosetests.xml
 coverage.xml
 
 # -----------------------------
-# Altres
+# Misc
 # -----------------------------
 *.log
 *.tmp

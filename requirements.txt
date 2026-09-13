@@ -1,5 +1,18 @@
-pandas
-sqlalchemy
-pymysql
-pytest
-cryptography
+# Core data processing
+pandas==3.0.5
+numpy==2.5.3
+
+# Database
+sqlalchemy==2.0.52
+pymysql==1.2.0
+cryptography==50.0.1
+
+# Dashboard
+streamlit==1.63.0
+plotly==7.0.0
+
+# Configuration
+python-dotenv==1.2.3
+
+# Testing
+pytest==9.1.1

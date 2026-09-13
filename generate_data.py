@@ -1,5 +1,5 @@
 """
-Script to generate a synthetic sales dataset for the Bon Preu Demo.
+Script to generate a synthetic sales dataset for the retail sales demo.
 Creates a CSV file with 4000 records within the bounded dates (date, product, quantity, price).
 """
 
@@ -13,30 +13,30 @@ def generate_dataset(output_path="data/input.csv", n_rows=4000, seed=42):
 
     # Product catalog (name and base price in €)
     products = [
-        ("Pa", 1.20),
-        ("Llet", 0.95),
-        ("Formatge", 2.60),
-        ("Iogurt", 0.55),
-        ("Poma", 0.70),
-        ("Plàtan", 0.50),
-        ("Tomàquet", 1.10),
-        ("Enciam", 0.90),
-        ("Oli d'oliva", 6.50),
-        ("Arròs", 1.30),
+        ("Bread", 1.20),
+        ("Milk", 0.95),
+        ("Cheese", 2.60),
+        ("Yogurt", 0.55),
+        ("Apple", 0.70),
+        ("Banana", 0.50),
+        ("Tomato", 1.10),
+        ("Lettuce", 0.90),
+        ("Olive Oil", 6.50),
+        ("Rice", 1.30),
         ("Pasta", 1.10),
-        ("Pollastre", 5.20),
-        ("Tonyina (llauna)", 1.40),
-        ("Aigua mineral", 0.35),
-        ("Cervesa", 0.85),
-        ("Vi negre", 5.90),
-        ("Sucre", 1.00),
-        ("Sal", 0.40),
-        ("Ou", 0.25),
-        ("Cafè", 3.80),
-        ("Te", 2.10),
-        ("Xocolata", 1.80),
-        ("Galetes", 1.50),
-        ("Paper higiènic", 0.45),
+        ("Chicken", 5.20),
+        ("Canned Tuna", 1.40),
+        ("Mineral Water", 0.35),
+        ("Beer", 0.85),
+        ("Red Wine", 5.90),
+        ("Sugar", 1.00),
+        ("Salt", 0.40),
+        ("Eggs", 0.25),
+        ("Coffee", 3.80),
+        ("Tea", 2.10),
+        ("Chocolate", 1.80),
+        ("Cookies", 1.50),
+        ("Toilet Paper", 0.45),
     ]
 
     # Dates (January - June 2025)
@@ -63,7 +63,7 @@ def generate_dataset(output_path="data/input.csv", n_rows=4000, seed=42):
     # Ensure the data/ folder exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
-    print(f"✅ Dataset generated: {output_path} ({len(df)} rows)")
+    print(f"Dataset generated: {output_path} ({len(df)} rows)")
 
 if __name__ == "__main__":
     generate_dataset()

@@ -4,16 +4,17 @@
 FROM python:3.10-slim
 
 # Prevent Python from writing .pyc files and ensure immediate output
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 # -----------------------------
 # Install system dependencies
 # -----------------------------
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    default-mysql-client \
-    netcat-openbsd \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
@@ -34,7 +35,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # -----------------------------
 COPY . .
 
+# Streamlit port
+EXPOSE 8501
+
 # -----------------------------
-# Run ETL script by default
+# Run the dashboard by default (use docker-compose for the ETL service)
 # -----------------------------
-CMD ["python", "etl/etl_main.py"]
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

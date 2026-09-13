@@ -7,20 +7,20 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Entorn virtual
+# Virtual environment
 venv/
 ENV/
 env/
 .venv/
 
-# Fitxers de dependències generats
+# Generated dependency artifacts
 *.egg
 *.egg-info/
 dist/
 build/
 .eggs/
 
-# Fitxers de test/coverage
+# Test/coverage artifacts
 .coverage
 htmlcov/
 .cache/
@@ -29,9 +29,7 @@ pytest_cache/
 nosetests.xml
 coverage.xml
 
-# -----------------------------
-# Configuracions IDE/Editor
-# -----------------------------
+# IDE/Editor configurations
 # VS Code
 .vscode/
 .code-workspace
@@ -51,21 +49,21 @@ Icon
 # -----------------------------
 # Docker
 # -----------------------------
-# Ignora carpetes generades per volums locals
+# Ignore local volume folders
 docker-data/
 
 # -----------------------------
-# Secrets i variables entorn
+# Secrets and environment variables
 # -----------------------------
 .env
 *.key
 *.pem
 
 # -----------------------------
-# Altres
+# Misc
 # -----------------------------
 # Logs
 *.log
 
-# Power BI cache/temps
+# Power BI temp/cache files
 *.tmp
