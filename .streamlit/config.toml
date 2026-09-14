@@ -1,10 +1,12 @@
 # Streamlit theme and server defaults (used locally and in Docker)
 [theme]
-primaryColor = "#1f77b4"
+primaryColor = "#F55036"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
+secondaryBackgroundColor = "#FFF7F2"
+textColor = "#1F2937"
 font = "sans serif"
 
 [server]
 headless = true
+# Must match upload_validation.MAX_FILE_MB — one consistent limit shown in the UI
+maxUploadSize = 20

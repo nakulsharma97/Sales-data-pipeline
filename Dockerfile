@@ -1,7 +1,9 @@
 # -----------------------------
 # Base stage: official Python image
 # -----------------------------
-FROM python:3.10-slim
+# Python 3.12: required by the pinned data stack (numpy 2.5.3 needs >=3.12,
+# pandas 3.0.5 needs >=3.11). Do not downgrade below 3.12.
+FROM python:3.12-slim
 
 # Prevent Python from writing .pyc files and ensure immediate output
 ENV PYTHONDONTWRITEBYTECODE=1 \

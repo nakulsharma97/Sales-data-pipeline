@@ -1,13 +1,25 @@
-# 📊 Sales Analytics Pipeline
+# 📊 Salesight — Sales Analytics Platform
 
 A complete, production-ready **sales analytics web application**: a pandas ETL
-pipeline loads retail sales data into MySQL, and an interactive Streamlit
-dashboard visualizes revenue, orders, products and trends.
+pipeline loads retail sales data into MySQL, and an interactive Streamlit app
+with a marketing landing page, email/password auth, and two analysis modes:
+
+- **Demo dataset** — the pre-loaded MySQL sales data (4,000 rows), filterable
+- **Your own CSV** — upload, strict schema validation, in-memory analysis
 
 **Architecture:**
 
 ```
 CSV Dataset → Python ETL (Pandas) → MySQL Database → Streamlit Dashboard → Cloud Deployment
+                                    ↘
+                          Landing Page → Login/Signup → CSV Upload (validated, in-memory analysis)
+```
+
+**User flow:**
+
+```
+Landing Page ──→ [Try Demo Dataset] ──→ MySQL demo dashboard (no login needed)
+      └────→ [Get Started] ──→ Signup/Login ──→ Upload CSV ──> Validate ──> Analyze (in-memory)
 ```
 
 Built as a portfolio project — clean, modular code that a 3rd-year CSE student
@@ -20,15 +32,30 @@ can read, run and extend.
 - **End-to-end ETL pipeline** — extract CSV, clean/validate/deduplicate,
   compute revenue (`total = quantity × price`), enrich with product categories,
   load into MySQL (idempotent, re-runnable, `--truncate` for full refresh)
-- **Interactive dashboard** — KPI cards, revenue-by-product bar chart,
-  category donut, daily revenue trend, top-sellers table, filterable data
-  table with CSV download
-- **Filters** — date range, multi-select categories, multi-select products
-  (all applied as parameterized SQL, never string interpolation)
+- **Landing page** — modern SaaS-style hero with "Try Demo Dataset" and
+  "Get Started" calls to action
+- **Email + password auth** — signup (name, email, password) with bcrypt-hashed passwords stored
+  in a MySQL `users` table; duplicate-email and format validation; guest mode
+  bypasses auth entirely
+- **CSV upload with schema validation** — files must match
+  `date, product, quantity, price` exactly; missing/extra columns, invalid
+  dates, non-numeric or negative values are rejected with specific error
+  messages; clean files flow through the same ETL transform and are analyzed
+  **in memory only** (never written to the shared database)
+- **Interactive dashboard** — five KPI cards (Revenue, Orders, Products, Avg
+  Order Value, Units Sold), revenue-by-product bar chart, category donut,
+  daily revenue trend, **month-vs-month revenue comparison**, top-sellers
+  table, filterable data table with CSV download — identical components in
+  demo and uploaded modes
+- **Filters** — date range, multi-select categories, multi-select products —
+  on the **demo dashboard via parameterized SQL** (never string interpolation)
+  and on the **uploaded dashboard via in-memory pandas masks** — both with a
+  one-click Reset; results are cached per filter combination for instant
+  re-application
 - **Robust states** — loading spinners, friendly connection errors with
   step-by-step fix instructions, empty-data handling
-- **Tested** — 35 pytest tests: ETL logic, SQL correctness (against SQLite),
-  connection error handling, and an end-to-end pipeline run
+- **Tested** — pytest suite: ETL logic, SQL correctness (against SQLite),
+  connection error handling, auth and an end-to-end pipeline run
 - **CI/CD** — GitHub Actions runs tests + a dashboard boot smoke test and
   builds the Docker image on every push
 - **Deployment-ready** — Dockerfile + docker-compose (MySQL + ETL + app),
@@ -41,6 +68,7 @@ can read, run and extend.
 | Data processing | Python 3.10+, pandas |
 | Database | MySQL 8.0, SQLAlchemy, PyMySQL |
 | Dashboard | Streamlit, Plotly |
+| Auth | bcrypt (password hashing), Streamlit session state |
 | Config | python-dotenv (environment variables) |
 | Testing | pytest |
 | Ops | Docker, Docker Compose, GitHub Actions |
@@ -49,7 +77,15 @@ can read, run and extend.
 
 ```
 Sales-data-pipeline/
-├── app.py                     # Streamlit dashboard (frontend + page logic)
+├── app.py                     # Page router: landing → auth → upload → dashboard
+├── auth.py                    # Signup/login, bcrypt hashing, users table
+├── upload_validation.py       # Strict CSV schema + value validation
+├── views/
+│   ├── landing.py             # Marketing landing page
+│   ├── auth_view.py           # Login / signup / guest UI
+│   ├── upload_view.py         # CSV upload screen + template download
+│   ├── dashboard.py           # Demo (MySQL) + uploaded (in-memory) dashboards
+│   └── charts.py              # Shared chart builders
 ├── etl/
 │   ├── etl_main.py            # ETL pipeline: extract → transform → load
 │   └── product_catalog.py     # product → category mapping (single source of truth)
@@ -156,7 +192,24 @@ Open http://localhost:8501 🎉
 pytest tests/ -v
 ```
 
-(Tests run without a MySQL server — SQL correctness is verified against SQLite.)
+72 tests: ETL logic, SQL correctness (verified against SQLite), connection
+error handling, an end-to-end pipeline run, auth (hashing, validation,
+duplicate emails, login flows) and CSV upload validation.
+
+## 👤 Using the App
+
+**Try the demo:** open the app → **Try Demo Dataset** — no account needed.
+
+**Analyze your own sales data:**
+1. Click **Get Started** → create an account (name + email + password, min 6 chars)
+   — passwords are bcrypt-hashed in the MySQL `users` table.
+2. On the upload page, download the **template CSV**, fill it with your data
+   (columns: `date, product, quantity, price` — exact match).
+3. Upload → the file is validated (missing/extra columns, bad dates,
+   non-numeric or negative values are rejected with specific messages).
+4. Valid files are cleaned by the same ETL logic and analyzed instantly —
+   **in memory only**, nothing is written to the shared database.
+5. Download the cleaned CSV anytime from the dashboard.
 
 ## 🐳 Run with Docker (one command)
 

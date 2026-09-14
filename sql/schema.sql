@@ -23,5 +23,18 @@ CREATE TABLE IF NOT EXISTS sales_staging (
 
 -- Optional dedicated app user (run as root):
 -- CREATE USER IF NOT EXISTS 'retail_user'@'%' IDENTIFIED BY 'change_me';
--- GRANT SELECT, INSERT, CREATE ON retail_demo.* TO 'retail_user'@'%';
+-- GRANT SELECT, INSERT, CREATE, INDEX ON retail_demo.* TO 'retail_user'@'%';
 -- FLUSH PRIVILEGES;
+
+-- ------------------------------------------------------------
+-- Users table for dashboard login/signup (created automatically
+-- by auth.py on first use; documented here for manual setup).
+-- Passwords are stored as bcrypt hashes, never plain text.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(120) NULL,
+    hashed_password CHAR(60) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

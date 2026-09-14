@@ -9,7 +9,8 @@ All KPI/chart queries accept optional start_date / end_date / categories.
 from sqlalchemy import text
 
 
-def _build(base_sql: str, tail_sql: str, start_date=None, end_date=None, categories=None, products=None):
+def _build(base_sql: str, tail_sql: str, start_date=None, end_date=None,
+           categories=None, products=None, min_total=None, max_total=None):
     """
     Combine a base SELECT ... FROM sales_staging statement with optional
     WHERE filters (dates, categories, products) and a tail
@@ -36,71 +37,114 @@ def _build(base_sql: str, tail_sql: str, start_date=None, end_date=None, categor
         placeholders = ", ".join(f":prod_{i}" for i in range(len(products)))
         conditions.append(f"product IN ({placeholders})")
 
+    if min_total is not None:
+        conditions.append("total >= :min_total")
+        params["min_total"] = min_total
+    if max_total is not None:
+        conditions.append("total <= :max_total")
+        params["max_total"] = max_total
+
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
     return text(base_sql + where + tail_sql), params
 
 
-def get_total_revenue(start_date=None, end_date=None, categories=None, products=None):
+def get_total_revenue(start_date=None, end_date=None, categories=None,
+                      products=None, min_total=None, max_total=None):
     return _build(
         "SELECT COALESCE(SUM(total), 0) AS total_revenue FROM sales_staging",
         "",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_total_orders(start_date=None, end_date=None, categories=None, products=None):
+def get_total_orders(start_date=None, end_date=None, categories=None,
+                     products=None, min_total=None, max_total=None):
     return _build(
         "SELECT COUNT(*) AS total_orders FROM sales_staging",
         "",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_total_products(start_date=None, end_date=None, categories=None, products=None):
+def get_total_products(start_date=None, end_date=None, categories=None,
+                       products=None, min_total=None, max_total=None):
     return _build(
         "SELECT COUNT(DISTINCT product) AS total_products FROM sales_staging",
         "",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_avg_order_value(start_date=None, end_date=None, categories=None, products=None):
+def get_avg_order_value(start_date=None, end_date=None, categories=None,
+                        products=None, min_total=None, max_total=None):
     return _build(
         "SELECT COALESCE(AVG(total), 0) AS avg_order_value FROM sales_staging",
         "",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_sales_by_product(start_date=None, end_date=None, categories=None, products=None):
+def get_kpis(start_date=None, end_date=None, categories=None,
+             products=None, min_total=None, max_total=None):
+    """All five KPI figures in one round-trip (used by the demo dashboard)."""
+    return _build(
+        "SELECT COALESCE(SUM(total), 0) AS total_revenue, COUNT(*) AS total_orders, "
+        "COUNT(DISTINCT product) AS total_products, "
+        "COALESCE(AVG(total), 0) AS avg_order_value, "
+        "COALESCE(SUM(quantity), 0) AS total_units FROM sales_staging",
+        "",
+        start_date, end_date, categories, products, min_total, max_total,
+    )
+
+
+def get_revenue_by_month(start_date=None, end_date=None, categories=None,
+                         products=None, min_total=None, max_total=None):
+    """Month-level revenue trend — powers the monthly comparison chart.
+
+    Uses SUBSTR(CAST(date AS CHAR), 1, 7) instead of MySQL's DATE_FORMAT so
+    the same SQL runs on MySQL (production) and SQLite (the test suite)."""
+    return _build(
+        "SELECT SUBSTR(CAST(date AS CHAR), 1, 7) AS month, "
+        "SUM(total) AS monthly_revenue FROM sales_staging",
+        " GROUP BY SUBSTR(CAST(date AS CHAR), 1, 7) ORDER BY month",
+        start_date, end_date, categories, products, min_total, max_total,
+    )
+
+
+def get_sales_by_product(start_date=None, end_date=None, categories=None,
+                         products=None, min_total=None, max_total=None):
     return _build(
         "SELECT product, SUM(total) AS revenue, SUM(quantity) AS units FROM sales_staging",
         " GROUP BY product ORDER BY revenue DESC",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_sales_by_category(start_date=None, end_date=None, categories=None, products=None):
+def get_sales_by_category(start_date=None, end_date=None, categories=None,
+                          products=None, min_total=None, max_total=None):
     return _build(
         "SELECT category, SUM(total) AS revenue, SUM(quantity) AS units FROM sales_staging",
         " GROUP BY category ORDER BY revenue DESC",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_revenue_by_date(start_date=None, end_date=None, categories=None, products=None):
+def get_revenue_by_date(start_date=None, end_date=None, categories=None,
+                        products=None, min_total=None, max_total=None):
     return _build(
         "SELECT DATE(date) AS sale_date, SUM(total) AS daily_revenue FROM sales_staging",
         " GROUP BY DATE(date) ORDER BY sale_date",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
-def get_top_selling_products(limit=10, start_date=None, end_date=None, categories=None, products=None):
+def get_top_selling_products(limit=10, start_date=None, end_date=None,
+                             categories=None, products=None,
+                             min_total=None, max_total=None):
     return _build(
         "SELECT product, SUM(total) AS revenue, SUM(quantity) AS total_quantity FROM sales_staging",
         f" GROUP BY product ORDER BY revenue DESC LIMIT {int(limit)}",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )
 
 
@@ -122,10 +166,11 @@ def get_products_in_categories(categories=None):
     return sql, params
 
 
-def get_sales_data_filtered(start_date=None, end_date=None, categories=None, products=None):
+def get_sales_data_filtered(start_date=None, end_date=None, categories=None,
+                            products=None, min_total=None, max_total=None):
     """Row-level table for the dashboard, with the shared filters applied."""
     return _build(
         "SELECT date, product, category, quantity, price, total FROM sales_staging",
         " ORDER BY date DESC",
-        start_date, end_date, categories, products,
+        start_date, end_date, categories, products, min_total, max_total,
     )

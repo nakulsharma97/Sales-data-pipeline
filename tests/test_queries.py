@@ -61,6 +61,40 @@ def test_avg_order_value(engine):
     assert float(out["avg_order_value"].iloc[0]) == pytest.approx(float(df["total"].mean()))
 
 
+def test_combined_kpis(engine):
+    """get_kpis must match the individual KPI queries in one round-trip."""
+    df = engine._test_df
+    out = run(engine, *sq.get_kpis())
+    assert float(out["total_revenue"].iloc[0]) == pytest.approx(float(df["total"].sum()))
+    assert int(out["total_orders"].iloc[0]) == len(df)
+    assert int(out["total_products"].iloc[0]) == df["product"].nunique()
+    assert float(out["avg_order_value"].iloc[0]) == pytest.approx(float(df["total"].mean()))
+    assert int(out["total_units"].iloc[0]) == int(df["quantity"].sum())
+
+
+def test_combined_kpis_with_filters(engine):
+    df = engine._test_df
+    out = run(engine, *sq.get_kpis(categories=["Bakery"]))
+    expected = df[df["category"] == "Bakery"]
+    assert int(out["total_orders"].iloc[0]) == len(expected)
+    assert float(out["total_revenue"].iloc[0]) == pytest.approx(float(expected["total"].sum()))
+    assert int(out["total_units"].iloc[0]) == int(expected["quantity"].sum())
+
+
+def test_revenue_by_month(engine):
+    """Monthly grouping: one row per YYYY-MM present, sums match pandas."""
+    df = engine._test_df
+    out = run(engine, *sq.get_revenue_by_month())
+    expected = (
+        df.assign(month=df["date"].dt.strftime("%Y-%m"))
+        .groupby("month")["total"].sum()
+    )
+    assert len(out) == len(expected)
+    merged = out.assign(month=out["month"].astype(str)).set_index("month")
+    for month, exp_sum in expected.items():
+        assert float(merged.loc[month, "monthly_revenue"]) == pytest.approx(float(exp_sum))
+
+
 # ----------------------------------------------------------------- Filters
 def test_date_filters(engine):
     df = engine._test_df
