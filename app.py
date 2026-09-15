@@ -59,6 +59,71 @@ for key, value in {"page": "landing", "df_source": None, "user": None,
         st.session_state[key] = value
 
 
+# ---------------------------------------------------------------- URL routing
+# Every page maps to a URL query string so the browser back/forward
+# buttons work.  Streamlit re-runs the script on every navigation,
+# so reading query_params here is enough to honour the URL state.
+
+# Map between internal page names and URL-safe query-param values.
+_PAGE_MAP = {
+    "landing": "",
+    "auth": "auth",
+    "upload": "upload",
+    "app": "dashboard",
+}
+_REVERSE_MAP = {v: k for k, v in _PAGE_MAP.items()}
+_REVERSE_MAP[""] = "landing"  # empty query string = landing page
+
+
+def _sync_page_from_url() -> None:
+    """Read ?page=… from the browser URL and apply it to session state.
+
+    Called once at the top of every Streamlit rerun.  When the user clicks
+    the browser back / forward button the URL changes and Streamlit re-runs
+    this script — the query_param value wins over session_state so the
+    browser history works naturally.
+    """
+    qp = st.query_params
+    url_page = qp.get("page", "")          # empty string = landing
+    internal = _REVERSE_MAP.get(url_page)    # None → unknown page
+    if internal is not None:
+        # Honour the source= param for the dashboard page
+        if internal == "app":
+            st.session_state.df_source = qp.get("source", "demo")
+        st.session_state.page = internal
+    # If the URL has no recognisable page param the current session_state
+    # page is kept (first visit defaults to "landing" via the init block).
+
+
+def navigate_to(page: str, *, source: str | None = None) -> None:
+    """Programmatic navigation that updates BOTH session state AND the
+    browser URL so back/forward buttons keep working.
+
+    Parameters
+    ----------
+    page : str
+        Internal page name ("landing", "auth", "upload", "app").
+    source : str | None
+        Only for "app": "demo" or "uploaded".
+    """
+    st.session_state.page = page
+    if source is not None:
+        st.session_state.df_source = source
+
+    # Build query params for the URL bar.  Clear every existing param first
+    # so navigating to the landing page (empty URL) actually removes stale
+    # ?page=...&source=... from the browser bar.
+    for key in list(st.query_params):
+        st.query_params[key] = ""
+
+    if page != "landing":
+        st.query_params["page"] = _PAGE_MAP.get(page, "")
+    if page == "app" and source:
+        st.query_params["source"] = source
+
+    st.rerun()
+
+
 # ------------------------------------------------------------------- top bar
 def render_topbar(active=None):
     """App navbar: logo · Home · Upload CSV (active state) · user · logout.
@@ -133,8 +198,7 @@ def render_topbar(active=None):
         )
     with c_home:
         if st.button("🏠 Home", use_container_width=True):
-            st.session_state.page = "landing"
-            st.rerun()
+            navigate_to("landing")
     with c_up:
         if st.button(
             "📤 Upload CSV",
@@ -168,18 +232,16 @@ def render_topbar(active=None):
         if user:
             if st.button("🚪 Log out", use_container_width=True):
                 auth.logout()
-                st.session_state.page = "landing"
-                st.rerun()
+                navigate_to("landing")
 
 
 # ------------------------------------------------------------------- router
 def go_demo():
-    st.session_state.df_source = "demo"
-    st.session_state.page = "app"
+    navigate_to("app", source="demo")
 
 
 def go_auth():
-    st.session_state.page = "auth"
+    navigate_to("auth")
 
 
 def go_upload_gated():
@@ -187,16 +249,18 @@ def go_upload_gated():
     with a clear notice; authenticated users go straight to the uploader."""
     if auth.current_user() is None:
         st.session_state.auth_notice = "upload"
-        st.session_state.page = "auth"
+        navigate_to("auth")
     else:
-        st.session_state.page = "upload"
-    st.rerun()
+        navigate_to("upload")
 
 
 def go_upload():
     """Landing CTA — same gate as the navbar button."""
     go_upload_gated()
 
+
+# Read URL query params to honour browser back/forward
+_sync_page_from_url()
 
 page = st.session_state.page
 
@@ -226,8 +290,7 @@ elif page == "upload":
     # Safety net: the gated buttons keep guests out, this guards direct state
     if auth.current_user() is None:
         st.session_state.auth_notice = "upload"
-        st.session_state.page = "auth"
-        st.rerun()
+        navigate_to("auth")
     render_topbar(active="upload")
     upload_view.render()
 
@@ -239,5 +302,4 @@ elif page == "app":
         dashboard.render_demo_dashboard()
 
 else:
-    st.session_state.page = "landing"
-    st.rerun()
+    navigate_to("landing")

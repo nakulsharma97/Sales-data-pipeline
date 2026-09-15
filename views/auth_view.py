@@ -374,6 +374,7 @@ def render(on_success):
                     st.error(error)
                 else:
                     st.session_state.page = "upload"
+                    st.query_params.update({"page": "upload"})
                     st.toast("Welcome back!", icon="👋")
                     st.rerun()
         else:
@@ -399,6 +400,7 @@ def render(on_success):
                     st.error(error)
                 else:
                     st.session_state.page = "upload"
+                    st.query_params.update({"page": "upload"})
                     st.toast("Account created — welcome to Salesight!", icon="✅")
                     st.rerun()
 
@@ -413,7 +415,12 @@ def render(on_success):
         # Cancel button — return to previous page if coming from upload gate
         if st.session_state.get("auth_notice") == "upload":
             if st.button("← Cancel and go back", use_container_width=True, key="auth_cancel"):
-                st.session_state.page = "app" if st.session_state.get("df_source") else "landing"
+                if st.session_state.get("df_source"):
+                    st.session_state.page = "app"
+                    st.query_params.update({"page": "dashboard", "source": st.session_state.df_source})
+                else:
+                    st.session_state.page = "landing"
+                    st.query_params.update({"page": ""})
                 st.rerun()
 
         _html(

@@ -365,6 +365,7 @@ def render():
                     st.session_state.uploaded_df = cleaned
                     st.session_state.df_source = "uploaded"
                     st.session_state.page = "app"
+                    st.query_params.update({"page": "dashboard", "source": "uploaded"})
                     _record_history(
                         uploaded.name, "ok",
                         f"{len(cleaned):,} clean rows — validated",

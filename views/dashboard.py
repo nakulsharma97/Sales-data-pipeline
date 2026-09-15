@@ -70,24 +70,45 @@ def _demo_page_css() -> None:
                 border-color: {CORAL}; background: #FFF4EC;
                 color: {CORAL};
             }}
-            /* 'Show Filters' restore button (only rendered when the panel is
-               hidden) — coral outline like the reference mock */
-            [data-testid="stVerticalBlock"]:has(.sf-anchor) button[kind="secondary"] {{
-                background: #FFFFFF; color: {CORAL};
-                border: 1px solid #F8CDBB; border-radius: 10px;
-                font-weight: 700; white-space: nowrap;
-                box-shadow: 0 2px 8px rgba(31,41,55,0.05);
+            /* ---- compact filter toggle icons ----
+               « sits in the sidebar header (hide); ☷ appears at the LEFT of
+               the main header only while the panel is hidden (restore).
+               Both are type="tertiary" buttons, so this CSS targets them
+               alone — the full-width Reset Filters button is untouched. */
+            [data-testid="stSidebar"] button[kind="tertiary"],
+            [data-testid="stMain"] button[kind="tertiary"] {{
+                width: 2.35rem !important; min-width: 2.35rem !important;
+                height: 2.35rem !important; padding: 0 !important;
+                display: inline-flex !important; align-items: center !important;
+                justify-content: center !important;
+                background: #FFFFFF !important; color: {SLATE} !important;
+                border: 1px solid {LINE} !important; border-radius: 10px !important;
+                font-size: 1.02rem !important; font-weight: 700 !important;
+                line-height: 1 !important;
+                box-shadow: 0 2px 8px rgba(31,41,55,0.06);
             }}
-            [data-testid="stVerticalBlock"]:has(.sf-anchor) button[kind="secondary"]:hover {{
-                border-color: {CORAL}; background: #FFF4EC;
+            [data-testid="stSidebar"] button[kind="tertiary"]:hover,
+            [data-testid="stMain"] button[kind="tertiary"]:hover {{
+                color: {CORAL} !important; border-color: #F8CDBB !important;
+                background: #FFF4EC !important;
             }}
-            [data-testid="stElementContainer"]:has(.sf-anchor) {{ display: none; }}
-            /* the toggle button's label must never truncate ("Hide…") */
-            [data-testid="stVerticalBlock"]:has(.sf-anchor) button p {{
-                white-space: nowrap; font-size: 0.82rem;
+            /* pin the « icon to the TOP-RIGHT corner of the sidebar card
+               (absolute, like the reference mock — immune to Streamlit's
+               column stacking inside narrow sidebars) */
+            [data-testid="stSidebar"] {{ position: relative; }}
+            [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(button[kind="tertiary"]) {{
+                position: absolute !important;
+                top: 1.05rem; right: 0.95rem; z-index: 20;
+                margin: 0 !important;
             }}
-            [data-testid="stSidebar"] .block-container {{
-                padding: 1.6rem 1.1rem 1.5rem 1.1rem !important;
+            /* button labels never wrap/truncate (no "♻️ …" pills) */
+            [data-testid="stMain"] button p {{ white-space: nowrap; }}
+            @media (max-width: 1100px) {{
+                [data-testid="stMain"] button {{
+                    font-size: 0.72rem !important;
+                    padding-left: 0.5rem !important;
+                    padding-right: 0.5rem !important;
+                }}
             }}
             .stDateInput label, .stMultiSelect label, .stSlider label {{
                 font-size: 0.78rem !important; font-weight: 700 !important;
@@ -109,10 +130,10 @@ def _demo_page_css() -> None:
             h1.dtitle .accent {{ color:{CORAL}; }}
             .dsub {{ color:{SLATE}; font-size:0.95rem; margin-top:0.45rem; }}
             .range-chip {{
-                display:inline-flex; align-items:center; gap:0.4rem;
+                display:inline-flex; align-items:center; gap:0.4rem; flex-wrap:nowrap;
                 background:#FFFFFF; border:1px solid {LINE}; border-radius:999px;
                 padding:0.34rem 0.95rem; font-size:0.8rem; font-weight:700; color:{INK};
-                box-shadow:0 2px 8px rgba(31,41,55,0.05);
+                box-shadow:0 2px 8px rgba(31,41,55,0.05); white-space:nowrap;
             }}
             .range-chip .dot {{ color:{CORAL}; }}
             .kpi-card {{
@@ -269,25 +290,13 @@ def _toggle_filters():
     st.rerun()
 
 
-def _show_filters_button():
-    """Always-accessible toggle in the MAIN content header (never inside the
-    sidebar): “Hide Filters” while the panel is open, “Show Filters” once it
-    is hidden. The .sf-anchor span lets CSS find and style the button."""
-    hidden = not st.session_state.get("filters_visible", True)
-    st.button("🔎 Show Filters" if hidden else "🔎 Hide Filters",
-              on_click=_toggle_filters, use_container_width=True)
-    st.markdown('<span class="sf-anchor"></span>',
-                unsafe_allow_html=True)
-
-
 def _filters_header():
+    """Sidebar panel heading; the « hide icon sits in the adjacent column."""
     st.markdown(
         f"""
-        <div style="display:flex; align-items:center; justify-content:space-between;
-                    margin-bottom:0.55rem;">
-            <div style="font-weight:800; color:{NAVY}; font-size:1.05rem;">
-                ⚙️ Filters
-            </div>
+        <div style="font-weight:800; color:{NAVY}; font-size:1.05rem;
+                    display:flex; align-items:center; min-height:2.35rem;">
+            ⚙️ Filters
         </div>
         """,
         unsafe_allow_html=True,
@@ -309,8 +318,8 @@ def _demo_filters_sidebar(min_date, max_date, max_total, products):
     with hbtn_l:
         _filters_header()
     with hbtn_r:
-        st.sidebar.button("«", on_click=_toggle_filters, use_container_width=True,
-                          help="Hide the filter panel")
+        st.sidebar.button("«", type="tertiary", on_click=_toggle_filters,
+                          help="Hide filters")
     st.sidebar.caption("Narrow the demo data by date, product, category or price.")
 
     start_date = st.sidebar.date_input(
@@ -352,8 +361,8 @@ def _uploaded_filters_sidebar(d_min_all, d_max_all, df, price_max):
     with hbtn_l:
         _filters_header()
     with hbtn_r:
-        st.sidebar.button("«", on_click=_toggle_filters, use_container_width=True,
-                          help="Hide the filter panel")
+        st.sidebar.button("«", type="tertiary", on_click=_toggle_filters,
+                          help="Hide filters")
     st.sidebar.caption("Narrow YOUR data by date, product, category or price.")
 
     start_date = st.sidebar.date_input(
@@ -619,7 +628,9 @@ def render_demo_dashboard():
     if f_prods:
         filter_bits.append(f"{len(f_prods)} product{'s' if len(f_prods)>1 else ''}")
 
-    header_l, header_r = st.columns([2.1, 1], vertical_alignment="center")
+    # Header: two columns — left (badge + heading + subtitle),
+    # right (restore icon · date range · Reset · Upload CSV).
+    header_l, header_r = st.columns([2.3, 1], vertical_alignment="center")
     with header_l:
         st.markdown(
             f"""
@@ -633,6 +644,14 @@ def render_demo_dashboard():
             unsafe_allow_html=True,
         )
     with header_r:
+        # Compact restore icon — sits to the LEFT of the date-range chip,
+        # matching the reference design's top-right "Show Filters" button.
+        if not st.session_state.get("filters_visible", True):
+            restore_col, chip_col = st.columns([0.22, 0.78],
+                                               vertical_alignment="center")
+            with restore_col:
+                st.button("☷", type="tertiary", on_click=_toggle_filters,
+                          help="Show filters")
         chips = (
             f'<span class="range-chip"><span class="dot">📅</span> '
             f'{start_date.strftime("%b %d, %Y")} → {end_date.strftime("%b %d, %Y")}</span>'
@@ -642,18 +661,19 @@ def render_demo_dashboard():
                 '<span class="filters-chip">🔎 Active: '
                 + ", ".join(filter_bits) + '</span>'
             )
-        chip_row = (
-            '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-            f"{chips}</div>"
-        )
-        # Reference layout: toggle button sits left of the date-range chip,
-        # ALWAYS rendered so the panel can always be restored.
-        sf_col, chip_col = st.columns([1.3, 1.4], gap="small",
-                                      vertical_alignment="center")
-        with sf_col:
-            _show_filters_button()
-        with chip_col:
+        if st.session_state.get("filters_visible", True):
+            chip_row = (
+                '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+                f"{chips}</div>"
+            )
             st.markdown(chip_row, unsafe_allow_html=True)
+        else:
+            with chip_col:
+                chip_row = (
+                    '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+                    f"{chips}</div>"
+                )
+                st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset"):
@@ -662,6 +682,7 @@ def render_demo_dashboard():
             if st.button("⬆️ Upload CSV", type="primary", use_container_width=True,
                          key="hdr_upload"):
                 st.session_state.page = "upload"
+                st.query_params.update({"page": "upload"})
                 st.rerun()
 
     # ---- KPI cards (real values from MySQL — single combined query) ----
@@ -754,7 +775,7 @@ def render_uploaded_dashboard():
         details = fdf.copy()
 
     # ---- header (YOUR DATA badge; chip shows the ACTIVE filtered range) ----
-    header_l, header_r = st.columns([2.1, 1], vertical_alignment="center")
+    header_l, header_r = st.columns([2.3, 1], vertical_alignment="center")
     with header_l:
         st.markdown(
             f"""
@@ -768,17 +789,30 @@ def render_uploaded_dashboard():
             unsafe_allow_html=True,
         )
     with header_r:
-        chip_row = (
-            '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-            f'<span class="range-chip"><span class="dot">📅</span> '
-            f'{start_date:%b %d, %Y} → {end_date:%b %d, %Y}</span></div>'
+        # Compact restore icon — sits to the LEFT of the date-range chip.
+        if not st.session_state.get("filters_visible", True):
+            restore_col, chip_col = st.columns([0.22, 0.78],
+                                               vertical_alignment="center")
+            with restore_col:
+                st.button("☷", type="tertiary", on_click=_toggle_filters,
+                          help="Show filters")
+        chips = (
+            '<span class="range-chip"><span class="dot">📅</span> '
+            f'{start_date:%b %d, %Y} → {end_date:%b %d, %Y}</span>'
         )
-        sf_col, chip_col = st.columns([1.3, 1.4], gap="small",
-                                      vertical_alignment="center")
-        with sf_col:
-            _show_filters_button()
-        with chip_col:
+        if st.session_state.get("filters_visible", True):
+            chip_row = (
+                '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+                f"{chips}</div>"
+            )
             st.markdown(chip_row, unsafe_allow_html=True)
+        else:
+            with chip_col:
+                chip_row = (
+                    '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+                    f"{chips}</div>"
+                )
+                st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset_up"):
@@ -787,6 +821,7 @@ def render_uploaded_dashboard():
             if st.button("⬆️ Upload CSV", type="primary", use_container_width=True,
                          key="hdr_upload_up"):
                 st.session_state.page = "upload"
+                st.query_params.update({"page": "upload"})
                 st.rerun()
 
     # ---- KPI cards (computed from the filtered upload) ----
