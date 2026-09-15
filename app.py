@@ -135,52 +135,96 @@ def render_topbar(active=None):
         f"""
         <style>
             .stopbar {{
-                padding: 0.8rem 0 0.5rem 0;
-                border-bottom: none !important;
+                padding: 0.55rem 0;
+                border-bottom: 1px solid #F3ECE7 !important;
                 box-shadow: none !important;
+                margin-bottom: 0.6rem;
             }}
-            .brand {{ display:flex; align-items:center; gap:0.45rem; }}
-            .brand .logo {{ color:#F55036; font-size:1.15rem; }}
-            .brand .name {{ font-weight:800; font-size:1.25rem; color:#111827; letter-spacing:-0.3px; }}
+            .brand {{ display:flex; align-items:center; gap:0.4rem; height:2.5rem; }}
+            .brand .logo {{ color:#F55036; font-size:1.1rem; }}
+            .brand .name {{ font-weight:800; font-size:1.2rem; color:#111827; letter-spacing:-0.3px; }}
+
+            /* every pill in the navbar — Home, Upload CSV, Guest mode —
+               shares the same height/radius/padding so the row reads as
+               one aligned set instead of mismatched buttons */
+            [data-testid="stElementContainer"]:has(.nav-anchor) {{ display:none; }}
+            [data-testid="stVerticalBlock"]:has(.home-anchor) button,
+            [data-testid="stVerticalBlock"]:has(.upload-anchor) button {{
+                height:2.5rem !important; min-height:2.5rem !important;
+                border-radius:10px !important; font-weight:700 !important;
+                font-size:0.85rem !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.home-anchor) button {{
+                background:#FFFFFF !important; color:#111827 !important;
+                border:1px solid #E7E1DB !important; box-shadow:none !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.home-anchor) button:hover {{
+                border-color:#F55036 !important; color:#F55036 !important;
+                background:#FFF4EC !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.upload-anchor) button[kind="primary"] {{
+                background:#F55036 !important; color:#FFFFFF !important;
+                border:none !important; box-shadow:none !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.upload-anchor) button[kind="primary"]:hover {{
+                background:#E0432A !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.upload-anchor) button[kind="secondary"] {{
+                background:#FFFFFF !important; color:#111827 !important;
+                border:1px solid #E7E1DB !important; box-shadow:none !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.upload-anchor) button[kind="secondary"]:hover {{
+                border-color:#F55036 !important; color:#F55036 !important;
+                background:#FFF4EC !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.logout-anchor) button {{
+                height:2.5rem !important; min-height:2.5rem !important;
+                background:#FFFFFF !important; color:#111827 !important;
+                border:1px solid #E7E1DB !important; border-radius:10px !important;
+                font-weight:700 !important; font-size:0.85rem !important;
+                box-shadow:none !important;
+            }}
+            [data-testid="stVerticalBlock"]:has(.logout-anchor) button:hover {{
+                border-color:#F55036 !important; color:#F55036 !important;
+                background:#FFF4EC !important;
+            }}
             .suser {{
-                display:flex; align-items:center; gap:0.6rem;
-                justify-content:flex-end; min-height:2.6rem;
+                display:flex; align-items:center; gap:0.55rem;
+                justify-content:flex-end; height:2.5rem;
                 width:fit-content; margin-left:auto;
-                background:#FFFFFF; border:1px solid #F3ECE7;
-                border-radius:12px; padding:0.32rem 0.75rem 0.32rem 0.38rem;
-                box-shadow:0 2px 10px rgba(31,41,55,0.06);
+                background:#FFFFFF; border:1px solid #E7E1DB;
+                border-radius:10px; padding:0 0.7rem 0 0.32rem;
             }}
             .suser .uav {{
-                width:2.1rem; height:2.1rem; border-radius:50%; flex-shrink:0;
+                width:1.85rem; height:1.85rem; border-radius:50%; flex-shrink:0;
                 background:#F55036; color:#fff; display:flex;
                 align-items:center; justify-content:center;
-                font-size:0.78rem; font-weight:800;
-                box-shadow:0 3px 8px rgba(245,80,54,0.3);
+                font-size:0.72rem; font-weight:800;
             }}
             .suser .uinfo {{
                 display:flex; flex-direction:column; min-width:0;
-                line-height:1.3; gap:1px;
+                line-height:1.25; gap:1px;
             }}
             .suser .uname {{
-                font-weight:800; color:#111827; font-size:0.85rem;
+                font-weight:700; color:#111827; font-size:0.82rem;
                 max-width:10.5rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
             }}
             .suser .uemail {{
-                color:#6B7280; font-size:0.72rem;
+                color:#6B7280; font-size:0.7rem;
                 max-width:10.5rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
             }}
             .suser .chev {{
-                color:#9CA3AF; font-size:0.8rem; flex-shrink:0; margin-left:0.15rem;
+                color:#9CA3AF; font-size:0.75rem; flex-shrink:0; margin-left:0.1rem;
             }}
             @media (max-width: 1000px) {{
                 .suser .uemail, .suser .chev {{ display:none; }}
             }}
             .sguest {{
-                display:flex; align-items:center;
-                width:fit-content; margin-left:auto;
-                background:#F550360D; color:#F55036; border:1px solid #F5503633;
-                border-radius:999px; padding:0.3rem 0.85rem;
-                font-size:0.78rem; font-weight:700; white-space:nowrap;
+                display:flex; align-items:center; justify-content:center;
+                height:2.5rem; width:fit-content; margin-left:auto;
+                background:#FFF4EC; color:#F55036; border:1px solid #F5D6C8;
+                border-radius:10px; padding:0 0.9rem;
+                font-size:0.8rem; font-weight:700; white-space:nowrap;
             }}
         </style>
         """,
@@ -197,9 +241,13 @@ def render_topbar(active=None):
             unsafe_allow_html=True,
         )
     with c_home:
+        st.markdown('<span class="nav-anchor home-anchor"></span>',
+                    unsafe_allow_html=True)
         if st.button("🏠 Home", use_container_width=True):
             navigate_to("landing")
     with c_up:
+        st.markdown('<span class="nav-anchor upload-anchor"></span>',
+                    unsafe_allow_html=True)
         if st.button(
             "📤 Upload CSV",
             type="primary" if active == "upload" else "secondary",
@@ -230,6 +278,8 @@ def render_topbar(active=None):
             )
     with c_out:
         if user:
+            st.markdown('<span class="nav-anchor logout-anchor"></span>',
+                        unsafe_allow_html=True)
             if st.button("🚪 Log out", use_container_width=True):
                 auth.logout()
                 navigate_to("landing")

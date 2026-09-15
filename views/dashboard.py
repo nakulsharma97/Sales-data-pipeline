@@ -630,6 +630,14 @@ def render_demo_dashboard():
 
     # Header: two columns — left (badge + heading + subtitle),
     # right (restore icon · date range · Reset · Upload CSV).
+    tl_col, _tl_spacer = st.columns([1, 5])
+    with tl_col:
+        st.button(
+            "☷ Show Filters" if not st.session_state.get("filters_visible", True)
+            else "☰ Hide Filters",
+            on_click=_toggle_filters,
+        )
+
     header_l, header_r = st.columns([2.3, 1], vertical_alignment="center")
     with header_l:
         st.markdown(
@@ -644,14 +652,6 @@ def render_demo_dashboard():
             unsafe_allow_html=True,
         )
     with header_r:
-        # Compact restore icon — sits to the LEFT of the date-range chip,
-        # matching the reference design's top-right "Show Filters" button.
-        if not st.session_state.get("filters_visible", True):
-            restore_col, chip_col = st.columns([0.22, 0.78],
-                                               vertical_alignment="center")
-            with restore_col:
-                st.button("☷", type="tertiary", on_click=_toggle_filters,
-                          help="Show filters")
         chips = (
             f'<span class="range-chip"><span class="dot">📅</span> '
             f'{start_date.strftime("%b %d, %Y")} → {end_date.strftime("%b %d, %Y")}</span>'
@@ -661,19 +661,11 @@ def render_demo_dashboard():
                 '<span class="filters-chip">🔎 Active: '
                 + ", ".join(filter_bits) + '</span>'
             )
-        if st.session_state.get("filters_visible", True):
-            chip_row = (
-                '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-                f"{chips}</div>"
-            )
-            st.markdown(chip_row, unsafe_allow_html=True)
-        else:
-            with chip_col:
-                chip_row = (
-                    '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-                    f"{chips}</div>"
-                )
-                st.markdown(chip_row, unsafe_allow_html=True)
+        chip_row = (
+            '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+            f"{chips}</div>"
+        )
+        st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset"):
@@ -712,7 +704,15 @@ def render_uploaded_dashboard():
     _demo_page_css()
     render_uploaded_complete()
 
-    df: pd.DataFrame = st.session_state["uploaded_df"]
+    try:
+        df: pd.DataFrame = st.session_state["uploaded_df"]
+    except KeyError:
+        st.warning("📭 No uploaded data found. Please upload a CSV first.")
+        if st.button("⬆️ Go to Upload CSV"):
+            st.session_state.page = "upload"
+            st.query_params.update({"page": "upload"})
+            st.rerun()
+        return
     d_min_all = df["date"].min().date()
     d_max_all = df["date"].max().date()
     price_max = math.ceil(float(df["total"].max()) * 4) / 4.0
@@ -720,9 +720,10 @@ def render_uploaded_dashboard():
 
     if st.session_state.filters_visible:
         (start_date, end_date, selected_products,
-         selected_categories, price_lo, price_hi) = _uploaded_filters_sidebar(
+         selected_categories, price_range) = _uploaded_filters_sidebar(
             d_min_all, d_max_all, df, price_max,
         )
+        price_lo, price_hi = price_range
     else:
         start_date = st.session_state.get("saved::up_start", d_min_all)
         end_date = st.session_state.get("saved::up_end", d_max_all)
@@ -789,30 +790,15 @@ def render_uploaded_dashboard():
             unsafe_allow_html=True,
         )
     with header_r:
-        # Compact restore icon — sits to the LEFT of the date-range chip.
-        if not st.session_state.get("filters_visible", True):
-            restore_col, chip_col = st.columns([0.22, 0.78],
-                                               vertical_alignment="center")
-            with restore_col:
-                st.button("☷", type="tertiary", on_click=_toggle_filters,
-                          help="Show filters")
         chips = (
             '<span class="range-chip"><span class="dot">📅</span> '
             f'{start_date:%b %d, %Y} → {end_date:%b %d, %Y}</span>'
         )
-        if st.session_state.get("filters_visible", True):
-            chip_row = (
-                '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-                f"{chips}</div>"
-            )
-            st.markdown(chip_row, unsafe_allow_html=True)
-        else:
-            with chip_col:
-                chip_row = (
-                    '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
-                    f"{chips}</div>"
-                )
-                st.markdown(chip_row, unsafe_allow_html=True)
+        chip_row = (
+            '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
+            f"{chips}</div>"
+        )
+        st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset_up"):
