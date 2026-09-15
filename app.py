@@ -52,9 +52,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Session defaults
-for key, value in {"page": "landing", "df_source": None, "user": None,
-                   "filters_visible": True}.items():
+# Session defaults — every key that's ever read via .get()/`in` anywhere
+# in the app MUST be pre-seeded here. This build raises KeyError from both
+# .get() and `in` on a truly-missing key instead of returning a default,
+# so anything not initialized up front will crash later.
+_SESSION_DEFAULTS = {
+    "page": "landing", "df_source": None, "user": None,
+    "filters_visible": True, "uploaded_df": None,
+    "upload_history": [], "auth_mode": "login", "auth_notice": None,
+}
+for _key in dashboard.FILTER_KEYS + dashboard.UP_KEYS:
+    _SESSION_DEFAULTS[f"saved::{_key}"] = None
+
+for key, value in _SESSION_DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 

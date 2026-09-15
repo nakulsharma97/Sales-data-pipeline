@@ -278,13 +278,15 @@ def _toggle_filters():
     """
     if st.session_state.get("filters_visible"):
         for key in FILTER_KEYS + UP_KEYS:
-            if key in st.session_state:
+            try:
                 st.session_state[f"saved::{key}"] = st.session_state[key]
+            except KeyError:
+                pass  # that widget was never rendered (other mode's filter)
         st.session_state.filters_visible = False
     else:
         st.session_state.filters_visible = True
         for key in FILTER_KEYS + UP_KEYS:
-            saved = st.session_state.pop(f"saved::{key}", None)
+            saved = st.session_state.get(f"saved::{key}")
             if saved is not None:
                 st.session_state[key] = saved
     st.rerun()
@@ -704,15 +706,20 @@ def render_uploaded_dashboard():
     _demo_page_css()
     render_uploaded_complete()
 
+    df = None
     try:
-        df: pd.DataFrame = st.session_state["uploaded_df"]
+        df = st.session_state["uploaded_df"]
     except KeyError:
+        df = None
+
+    if df is None:
         st.warning("📭 No uploaded data found. Please upload a CSV first.")
         if st.button("⬆️ Go to Upload CSV"):
             st.session_state.page = "upload"
             st.query_params.update({"page": "upload"})
             st.rerun()
         return
+
     d_min_all = df["date"].min().date()
     d_max_all = df["date"].max().date()
     price_max = math.ceil(float(df["total"].max()) * 4) / 4.0
