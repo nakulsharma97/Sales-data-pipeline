@@ -167,10 +167,16 @@ def get_products_in_categories(categories=None):
 
 
 def get_sales_data_filtered(start_date=None, end_date=None, categories=None,
-                            products=None, min_total=None, max_total=None):
-    """Row-level table for the dashboard, with the shared filters applied."""
+                            products=None, min_total=None, max_total=None,
+                            limit=None):
+    """Row-level table for the dashboard, with the shared filters applied.
+    `limit` caps rows fetched for on-screen display — pass None for the
+    unlimited CSV-export query."""
+    tail = " ORDER BY date DESC"
+    if limit is not None:
+        tail += f" LIMIT {int(limit)}"
     return _build(
         "SELECT date, product, category, quantity, price, total FROM sales_staging",
-        " ORDER BY date DESC",
+        tail,
         start_date, end_date, categories, products, min_total, max_total,
     )

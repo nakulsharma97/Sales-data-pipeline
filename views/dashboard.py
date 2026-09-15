@@ -502,7 +502,6 @@ def render_dashboard_sections(by_product, by_category, by_date, by_month, top,
                 st.download_button("⬇️ Download cleaned CSV", data=csv_bytes,
                                    file_name=f"cleaned_sales_{source}.csv", mime="text/csv")
 
-
 # ------------------------------------------------------------- demo (MySQL)
 @st.cache_resource(show_spinner=False)
 def _cached_engine():
@@ -557,7 +556,8 @@ def _demo_data(start_date, end_date, categories, products,
         top = _read_sql(sq.get_top_selling_products(10, start_date, end_date, cats,
                                                     prods, min_total, max_total), conn)
         details = _read_sql(sq.get_sales_data_filtered(start_date, end_date, cats,
-                                                       prods, min_total, max_total), conn)
+                                                       prods, min_total, max_total,
+                                                       limit=500), conn)
     return kpis, by_product, by_category, by_date, by_month, top, details
 
 
