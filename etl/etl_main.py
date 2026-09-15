@@ -9,7 +9,11 @@ Stages:
 Run from the project root:
     python etl/etl_main.py                       # default file: data/input.csv
     python etl/etl_main.py --csv path/to/file.csv
-    python etl/etl_main.py --truncate            # replace table contents
+    python etl/etl_main.py --append              # add to the existing rows
+
+A plain run is a FULL REFRESH (the table is emptied first), so re-running the
+pipeline is idempotent and never inflates the dashboard totals. Pass --append
+only when you deliberately want to add a second file on top of the current data.
 """
 
 import argparse
@@ -141,8 +145,14 @@ def load(df: pd.DataFrame, mysql_uri: str | None = None, truncate: bool = False)
 
 
 # ------------------------------------------------------------------- Runner
-def run_pipeline(csv_path: str = "data/input.csv", truncate: bool = False) -> int:
-    """Extract -> Transform -> Load, with progress output. Returns rows loaded."""
+def run_pipeline(csv_path: str = "data/input.csv", truncate: bool = True) -> int:
+    """Extract -> Transform -> Load, with progress output. Returns rows loaded.
+
+    Defaults to a full refresh (truncate=True) so running the pipeline twice
+    leaves the same data behind instead of duplicating every row — the old
+    append-by-default behaviour silently tripled the demo dataset when the
+    pipeline was re-run, which also tripled every KPI on the dashboard.
+    """
     print(f"[1/3] Extract: reading {csv_path}")
     df = extract(csv_path)
     print(f"      {len(df)} raw rows")
@@ -163,12 +173,19 @@ def main() -> None:
     parser.add_argument(
         "--truncate",
         action="store_true",
-        help="Empty the table before loading (full refresh)",
+        help="Empty the table before loading (full refresh — now the default, "
+             "kept so existing scripts keep working)",
+    )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append to the existing rows instead of replacing them "
+             "(can duplicate data — usually not what you want)",
     )
     args = parser.parse_args()
 
     try:
-        run_pipeline(args.csv, truncate=args.truncate)
+        run_pipeline(args.csv, truncate=not args.append)
         print("ETL finished successfully.")
     except Exception as exc:
         # Plain ASCII only: Windows consoles (cp1252) cannot print emoji

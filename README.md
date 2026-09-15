@@ -31,7 +31,7 @@ can read, run and extend.
 
 - **End-to-end ETL pipeline** — extract CSV, clean/validate/deduplicate,
   compute revenue (`total = quantity × price`), enrich with product categories,
-  load into MySQL (idempotent, re-runnable, `--truncate` for full refresh)
+  load into MySQL (idempotent: a plain re-run replaces the data, `--append` to add)
 - **Landing page** — modern SaaS-style hero with "Try Demo Dataset" and
   "Get Started" calls to action
 - **Email + password auth** — signup (name, email, password) with bcrypt-hashed passwords stored
@@ -161,8 +161,9 @@ Or run the provided script: `mysql -u root -p < sql/schema.sql`
 ### 4. Run the ETL pipeline
 
 ```bash
-python etl/etl_main.py                # load data/input.csv (append)
-python etl/etl_main.py --truncate    # full refresh: empty table first
+python etl/etl_main.py                # load data/input.csv (full refresh)
+python etl/etl_main.py --truncate    # same full refresh (kept for compatibility)
+python etl/etl_main.py --append      # add to the existing rows instead
 python etl/etl_main.py --csv path/to/other.csv   # custom input file
 ```
 

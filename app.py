@@ -47,6 +47,16 @@ st.markdown(
            that still consume layout row-gap — hide their wrappers.
            Safe: <style> rules apply even when the element is display:none. */
         [data-testid="stElementContainer"]:has(style) { display: none !important; }
+        /* Top navigation bar (.stopbar marks its columns): on narrower screens
+           wrap the row onto extra lines instead of truncating the button labels
+           to "📤 Upl…". Wide screens keep the single-row layout. */
+        [data-testid="stHorizontalBlock"]:has(.stopbar) {
+            flex-wrap: wrap !important;
+            row-gap: 0.55rem !important;
+        }
+        [data-testid="stHorizontalBlock"]:has(.stopbar) > [data-testid="stColumn"] {
+            min-width: 118px;
+        }
     </style>
     """,
     unsafe_allow_html=True,
@@ -124,7 +134,7 @@ def navigate_to(page: str, *, source: str | None = None) -> None:
     # so navigating to the landing page (empty URL) actually removes stale
     # ?page=...&source=... from the browser bar.
     for key in list(st.query_params):
-        st.query_params[key] = ""
+        del st.query_params[key]
 
     if page != "landing":
         st.query_params["page"] = _PAGE_MAP.get(page, "")
@@ -323,6 +333,12 @@ def go_upload():
 _sync_page_from_url()
 
 page = st.session_state.page
+
+# The "sign in to upload" notice only belongs on the auth screen — clear it as
+# soon as the user navigates anywhere else so it never sticks around (and the
+# Cancel button on the auth page stops being offered once they have moved on).
+if page != "auth":
+    st.session_state.pop("auth_notice", None)
 
 if page == "landing":
     st.markdown(

@@ -37,8 +37,13 @@ def render(on_success):
     """Render the auth screen; on_success is called for the guest/demo path."""
     mode = st.session_state.get("auth_mode", "login")
 
+    # Were we sent here by the Upload-CSV gate? Keep the flag (do NOT pop it)
+    # so the banner AND the Cancel button below can both read it; the router in
+    # app.py clears it as soon as the user leaves the auth page.
+    gated_from_upload = st.session_state.get("auth_notice") == "upload"
+
     # Show notice when redirected from Upload CSV gate
-    if st.session_state.pop("auth_notice", None) == "upload":
+    if gated_from_upload:
         _html(
             f"""
             <div style="margin-bottom:1rem; padding:0.85rem 1.1rem; border-radius:12px;
@@ -373,8 +378,11 @@ def render(on_success):
                 if error:
                     st.error(error)
                 else:
+                    # Clear params first so no stale ?source= is carried over
+                    for key in list(st.query_params):
+                        del st.query_params[key]
                     st.session_state.page = "upload"
-                    st.query_params.update({"page": "upload"})
+                    st.query_params["page"] = "upload"
                     st.toast("Welcome back!", icon="👋")
                     st.rerun()
         else:
@@ -399,8 +407,11 @@ def render(on_success):
                 if error:
                     st.error(error)
                 else:
+                    # Clear params first so no stale ?source= is carried over
+                    for key in list(st.query_params):
+                        del st.query_params[key]
                     st.session_state.page = "upload"
-                    st.query_params.update({"page": "upload"})
+                    st.query_params["page"] = "upload"
                     st.toast("Account created — welcome to Salesight!", icon="✅")
                     st.rerun()
 
@@ -413,14 +424,17 @@ def render(on_success):
             st.rerun()
 
         # Cancel button — return to previous page if coming from upload gate
-        if st.session_state.get("auth_notice") == "upload":
+        if gated_from_upload:
             if st.button("← Cancel and go back", use_container_width=True, key="auth_cancel"):
+                # Drop every param first so no stale ?page= is left behind
+                for key in list(st.query_params):
+                    del st.query_params[key]
                 if st.session_state.get("df_source"):
                     st.session_state.page = "app"
-                    st.query_params.update({"page": "dashboard", "source": st.session_state.df_source})
+                    st.query_params["page"] = "dashboard"
+                    st.query_params["source"] = st.session_state.df_source
                 else:
                     st.session_state.page = "landing"
-                    st.query_params.update({"page": ""})
                 st.rerun()
 
         _html(

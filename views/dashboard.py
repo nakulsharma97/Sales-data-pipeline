@@ -71,25 +71,38 @@ def _demo_page_css() -> None:
                 color: {CORAL};
             }}
             /* ---- compact filter toggle icons ----
-               « sits in the sidebar header (hide); ☷ appears at the LEFT of
-               the main header only while the panel is hidden (restore).
-               Both are type="tertiary" buttons, so this CSS targets them
-               alone — the full-width Reset Filters button is untouched. */
+               « sits in the sidebar header (hide); ☷ appears in the main
+               header while the panel is hidden (restore). Both are
+               type="tertiary" buttons, so this CSS targets them alone — the
+               full-width Reset Filters button is untouched. */
             [data-testid="stSidebar"] button[kind="tertiary"],
             [data-testid="stMain"] button[kind="tertiary"] {{
                 width: 2.35rem !important; min-width: 2.35rem !important;
                 height: 2.35rem !important; padding: 0 !important;
                 display: inline-flex !important; align-items: center !important;
                 justify-content: center !important;
-                background: #FFFFFF !important; color: {SLATE} !important;
-                border: 1px solid {LINE} !important; border-radius: 10px !important;
-                font-size: 1.02rem !important; font-weight: 700 !important;
+                background: #FFFFFF !important;
+                border-radius: 10px !important;
+                font-size: 1.15rem !important; font-weight: 700 !important;
                 line-height: 1 !important;
+            }}
+            /* the sidebar « is deliberately quiet (it sits on white card) */
+            [data-testid="stSidebar"] button[kind="tertiary"] {{
+                color: {SLATE} !important;
+                border: 1px solid {LINE} !important;
                 box-shadow: 0 2px 8px rgba(31,41,55,0.06);
+            }}
+            /* the main-area ☷ restore is the only way back to the filters,
+               so it gets the coral accent — it must never be missed */
+            [data-testid="stMain"] button[kind="tertiary"] {{
+                color: {CORAL} !important;
+                border: 1px solid #F8CDBB !important;
+                background: #FFF4EC !important;
+                box-shadow: 0 2px 10px rgba(245,80,54,0.18);
             }}
             [data-testid="stSidebar"] button[kind="tertiary"]:hover,
             [data-testid="stMain"] button[kind="tertiary"]:hover {{
-                color: {CORAL} !important; border-color: #F8CDBB !important;
+                color: {CORAL} !important; border-color: {CORAL} !important;
                 background: #FFF4EC !important;
             }}
             /* pin the « icon to the TOP-RIGHT corner of the sidebar card
@@ -100,6 +113,29 @@ def _demo_page_css() -> None:
                 position: absolute !important;
                 top: 1.05rem; right: 0.95rem; z-index: 20;
                 margin: 0 !important;
+            }}
+            /* ---- filter-panel self-heal (desktop) ----
+               Streamlit's OWN sidebar control can collapse the panel
+               independently of our `filters_visible` flag: it sets
+               width:2px / max-width:0 / translateX(-300px) and
+               aria-expanded="false". When that happens the « icon AND every
+               filter slide off-screen, and because filters_visible is still
+               True our ☷ restore icon is not rendered either — leaving no way
+               back to the filters. Two guards below:
+                 1. never let Streamlit's collapse stick while we are
+                    rendering the panel (force it open again),
+                 2. hide Streamlit's own collapse button inside the sidebar,
+                    which sat on top of our « and caused exactly that state. */
+            @media (min-width: 800px) {{
+                [data-testid="stSidebar"][aria-expanded="false"] {{
+                    width: 300px !important;
+                    min-width: 300px !important;
+                    max-width: 300px !important;
+                    transform: none !important;
+                }}
+                [data-testid="stSidebar"] [data-testid="stBaseButton-headerNoPadding"] {{
+                    display: none !important;
+                }}
             }}
             /* button labels never wrap/truncate (no "♻️ …" pills) */
             [data-testid="stMain"] button p {{ white-space: nowrap; }}
@@ -136,6 +172,16 @@ def _demo_page_css() -> None:
                 box-shadow:0 2px 8px rgba(31,41,55,0.05); white-space:nowrap;
             }}
             .range-chip .dot {{ color:{CORAL}; }}
+            /* Dashboard header row (badge + heading + subtitle | chips + actions):
+               wrap onto separate lines on narrow screens so the controls are
+               never squeezed into truncated "♻️ R…" / "⬆️ U…" pills. */
+            [data-testid="stHorizontalBlock"]:has(.dtitle) {{
+                flex-wrap: wrap !important;
+                row-gap: 0.7rem !important;
+            }}
+            [data-testid="stHorizontalBlock"]:has(.dtitle) > [data-testid="stColumn"] {{
+                min-width: 290px;
+            }}
             .kpi-card {{
                 background:#FFFFFF; border:1px solid {LINE}; border-radius:16px;
                 padding:1.05rem 1.2rem; height:100%;
@@ -268,6 +314,11 @@ FILTER_KEYS = ("demo_start", "demo_end", "demo_cats", "demo_prods",
                "demo_price")
 UP_KEYS = ("up_start", "up_end", "up_cats", "up_prods", "up_price")
 
+# Rows fetched for the on-screen table preview. The full filtered dataset is
+# exported to CSV separately (and cached), so opening the demo dashboard never
+# pulls every row just to paint a 500-row preview.
+DETAIL_ROWS = 500
+
 
 def _toggle_filters():
     """Hide/show the filter panel, preserving every widget value.
@@ -312,6 +363,17 @@ def _reset(keys):
     st.rerun()
 
 
+def _seed(key, param, value):
+    """Default for a filter widget, only when session state has no value yet.
+
+    Supplying BOTH `value=`/`default=` and a session-state value makes
+    Streamlit log "The widget with key ... was created with a default value but
+    also had its value set via the Session State API". Omitting the default once
+    a value exists keeps the restored filter values and keeps the log clean.
+    """
+    return {} if key in st.session_state else {param: value}
+
+
 def _demo_filters_sidebar(min_date, max_date, max_total, products):
     """Demo-mode filter panel: Date Range · Product · Category · Price Range.
     Returns the filter values; the hide («) button sits in the panel header."""
@@ -325,12 +387,12 @@ def _demo_filters_sidebar(min_date, max_date, max_total, products):
     st.sidebar.caption("Narrow the demo data by date, product, category or price.")
 
     start_date = st.sidebar.date_input(
-        "Start date", value=min_date, min_value=min_date, max_value=max_date,
-        key="demo_start",
+        "Start date", min_value=min_date, max_value=max_date, key="demo_start",
+        **_seed("demo_start", "value", min_date),
     )
     end_date = st.sidebar.date_input(
-        "End date", value=max_date, min_value=min_date, max_value=max_date,
-        key="demo_end",
+        "End date", min_value=min_date, max_value=max_date, key="demo_end",
+        **_seed("demo_end", "value", max_date),
     )
     if start_date > end_date:
         st.sidebar.warning("Start date is after end date — using the full range.")
@@ -338,17 +400,18 @@ def _demo_filters_sidebar(min_date, max_date, max_total, products):
 
     selected_products = st.sidebar.multiselect(
         "Product", options=products, placeholder="All products",
-        key="demo_prods",
+        key="demo_prods", **_seed("demo_prods", "default", []),
     )
     from etl.product_catalog import CATEGORIES
 
     selected_categories = st.sidebar.multiselect(
         "Category", options=CATEGORIES, placeholder="All categories",
-        key="demo_cats",
+        key="demo_cats", **_seed("demo_cats", "default", []),
     )
     p_lo = st.sidebar.slider(
         "Price Range", min_value=0.0, max_value=float(max_total), step=0.5,
-        value=(0.0, float(max_total)), format="$%.2f", key="demo_price",
+        format="$%.2f", key="demo_price",
+        **_seed("demo_price", "value", (0.0, float(max_total))),
     )
     st.sidebar.button("♻️ Reset Filters", on_click=_reset, args=(FILTER_KEYS,),
                       use_container_width=True)
@@ -368,12 +431,12 @@ def _uploaded_filters_sidebar(d_min_all, d_max_all, df, price_max):
     st.sidebar.caption("Narrow YOUR data by date, product, category or price.")
 
     start_date = st.sidebar.date_input(
-        "Start date", value=d_min_all, min_value=d_min_all, max_value=d_max_all,
-        key="up_start",
+        "Start date", min_value=d_min_all, max_value=d_max_all, key="up_start",
+        **_seed("up_start", "value", d_min_all),
     )
     end_date = st.sidebar.date_input(
-        "End date", value=d_max_all, min_value=d_min_all, max_value=d_max_all,
-        key="up_end",
+        "End date", min_value=d_min_all, max_value=d_max_all, key="up_end",
+        **_seed("up_end", "value", d_max_all),
     )
     if start_date > end_date:
         st.sidebar.warning("Start date is after end date — using the full range.")
@@ -382,15 +445,18 @@ def _uploaded_filters_sidebar(d_min_all, d_max_all, df, price_max):
     selected_products = st.sidebar.multiselect(
         "Product", options=sorted(df["product"].dropna().unique().tolist()),
         placeholder="All products", key="up_prods",
+        **_seed("up_prods", "default", []),
     )
     selected_categories = st.sidebar.multiselect(
         "Category", options=sorted(df["category"].dropna().unique().tolist()),
         placeholder="All categories", key="up_cats",
+        **_seed("up_cats", "default", []),
     )
     price_full = (0.0, price_max)
     p_lo = st.sidebar.slider(
         "Price Range", min_value=0.0, max_value=price_max, step=0.25,
-        value=(0.0, price_max), format="$%.2f", key="up_price",
+        format="$%.2f", key="up_price",
+        **_seed("up_price", "value", (0.0, price_max)),
     )
     st.sidebar.button("♻️ Reset Filters", on_click=_reset, args=(UP_KEYS,),
                       use_container_width=True)
@@ -398,11 +464,17 @@ def _uploaded_filters_sidebar(d_min_all, d_max_all, df, price_max):
 
 
 def render_dashboard_sections(by_product, by_category, by_date, by_month, top,
-                              details, source, max_table_rows=None):
+                              details, source, max_table_rows=None,
+                              total_rows=None, csv_bytes=None):
     """Premium charts, top-sellers, table and download — identical for both modes.
 
     `by_month` powers the month-vs-month revenue comparison; `max_table_rows`
-    optionally caps the rendered table (the CSV download always has all rows)."""
+    optionally caps the rendered table. `total_rows` is the true filtered row
+    count (the demo fetch is capped, so it can exceed `len(details)`), and
+    `csv_bytes` is a pre-built full export — avoids re-serialising every row on
+    each rerun. Both default to sensible in-memory values."""
+    if total_rows is None:
+        total_rows = len(details)
     chart_l, chart_r = st.columns([3, 2], gap="small")
 
     with chart_l:
@@ -492,14 +564,15 @@ def render_dashboard_sections(by_product, by_category, by_date, by_month, top,
                     "date": "Date", "product": "Product", "category": "Category",
                     "quantity": "Quantity", "price": "Unit Price", "total": "Total",
                 })
-                if max_table_rows is not None and len(details) > max_table_rows:
+                if max_table_rows is not None and total_rows > max_table_rows:
                     st.caption(
-                        f"Showing {max_table_rows:,} of {len(details):,} rows — "
+                        f"Showing {max_table_rows:,} of {total_rows:,} rows — "
                         "download the CSV for the full dataset."
                     )
                 st.dataframe(table, use_container_width=True, height=420)
-                csv_bytes = details.to_csv(index=False).encode("utf-8")
-                st.download_button("⬇️ Download cleaned CSV", data=csv_bytes,
+                blob = (csv_bytes if csv_bytes is not None
+                        else details.to_csv(index=False).encode("utf-8"))
+                st.download_button("⬇️ Download cleaned CSV", data=blob,
                                    file_name=f"cleaned_sales_{source}.csv", mime="text/csv")
 
 # ------------------------------------------------------------- demo (MySQL)
@@ -555,10 +628,32 @@ def _demo_data(start_date, end_date, categories, products,
                                                      prods, min_total, max_total), conn)
         top = _read_sql(sq.get_top_selling_products(10, start_date, end_date, cats,
                                                     prods, min_total, max_total), conn)
+        # Only the rows the table actually shows — the full filtered dataset
+        # is exported separately by _demo_details_csv (below).
         details = _read_sql(sq.get_sales_data_filtered(start_date, end_date, cats,
                                                        prods, min_total, max_total,
-                                                       limit=500), conn)
+                                                       limit=DETAIL_ROWS), conn)
     return kpis, by_product, by_category, by_date, by_month, top, details
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _demo_details_csv(start_date, end_date, categories, products,
+                      min_total=None, max_total=None):
+    """Full filtered dataset rendered to CSV bytes, cached per filter combo.
+
+    The dashboard table only fetches `DETAIL_ROWS` rows for display, so the
+    unlimited export has to come from somewhere. Building it here — and
+    caching it — means the heavy fetch + serialisation happen once per filter
+    combination instead of on every rerun.
+    """
+    engine = _cached_engine()
+    cats = list(categories) if categories else None
+    prods = list(products) if products else None
+    with engine.connect() as conn:
+        details = _read_sql(sq.get_sales_data_filtered(start_date, end_date, cats,
+                                                       prods, min_total, max_total),
+                            conn)
+    return details.to_csv(index=False).encode("utf-8")
 
 
 def render_demo_dashboard():
@@ -598,11 +693,14 @@ def render_demo_dashboard():
     else:
         # Panel hidden — reuse the snapshotted filter values so hiding the
         # sidebar never changes what the dashboard shows.
-        start_date = st.session_state.get("saved::demo_start", min_date)
-        end_date = st.session_state.get("saved::demo_end", max_date)
-        selected_products = st.session_state.get("saved::demo_prods", [])
-        selected_categories = st.session_state.get("saved::demo_cats", [])
-        price_lo, price_hi = st.session_state.get("saved::demo_price", price_full)
+        # `or` (not .get(default)): the saved:: keys are pre-seeded to None by
+        # app.py, so .get(key, default) would hand back None and the date
+        # arithmetic below would blow up.
+        start_date = st.session_state.get("saved::demo_start") or min_date
+        end_date = st.session_state.get("saved::demo_end") or max_date
+        selected_products = st.session_state.get("saved::demo_prods") or []
+        selected_categories = st.session_state.get("saved::demo_cats") or []
+        price_lo, price_hi = st.session_state.get("saved::demo_price") or price_full
 
     # ---- build filter args (same query layer as before) ----
     f_start = datetime.combine(start_date, time.min)
@@ -631,15 +729,7 @@ def render_demo_dashboard():
         filter_bits.append(f"{len(f_prods)} product{'s' if len(f_prods)>1 else ''}")
 
     # Header: two columns — left (badge + heading + subtitle),
-    # right (restore icon · date range · Reset · Upload CSV).
-    tl_col, _tl_spacer = st.columns([1, 5])
-    with tl_col:
-        st.button(
-            "☷ Show Filters" if not st.session_state.get("filters_visible", True)
-            else "☰ Hide Filters",
-            on_click=_toggle_filters,
-        )
-
+    # right (compact restore icon · date range · Reset · Upload CSV).
     header_l, header_r = st.columns([2.3, 1], vertical_alignment="center")
     with header_l:
         st.markdown(
@@ -667,7 +757,19 @@ def render_demo_dashboard():
             '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
             f"{chips}</div>"
         )
-        st.markdown(chip_row, unsafe_allow_html=True)
+        # Icon-only restore toggle, rendered ONLY while the panel is hidden
+        # (its mirror image « lives in the sidebar header while it is open).
+        # Icon-only means it can never truncate on narrow screens.
+        if not st.session_state.get("filters_visible", True):
+            restore_col, chip_col = st.columns([0.22, 0.78],
+                                               vertical_alignment="center")
+            with restore_col:
+                st.button("☷", type="tertiary", on_click=_toggle_filters,
+                          help="Show filters", key="restore_filters_demo")
+            with chip_col:
+                st.markdown(chip_row, unsafe_allow_html=True)
+        else:
+            st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset"):
@@ -675,8 +777,11 @@ def render_demo_dashboard():
         with up2:
             if st.button("⬆️ Upload CSV", type="primary", use_container_width=True,
                          key="hdr_upload"):
+                # Clear params first so no stale ?source= is left in the URL
+                for key in list(st.query_params):
+                    del st.query_params[key]
                 st.session_state.page = "upload"
-                st.query_params.update({"page": "upload"})
+                st.query_params["page"] = "upload"
                 st.rerun()
 
     # ---- KPI cards (real values from MySQL — single combined query) ----
@@ -692,10 +797,15 @@ def render_demo_dashboard():
     ]
     render_kpi_cards(kpis_row)
 
-    # Cap the rendered table at 500 rows for instant reruns; the CSV download
-    # still contains the FULL filtered dataset.
+    # The table preview is capped at DETAIL_ROWS for fast reruns; the CSV
+    # export is built once from the FULL filtered dataset and cached.
+    full_csv = _demo_details_csv(f_start, f_end, f_cats, f_prods,
+                                 f_min_total, f_max_total)
     render_dashboard_sections(by_product, by_category, by_date, by_month, top,
-                              details, source="demo", max_table_rows=500)
+                              details, source="demo",
+                              max_table_rows=DETAIL_ROWS,
+                              total_rows=int(kpis["total_orders"].iloc[0]),
+                              csv_bytes=full_csv)
 
 
 # -------------------------------------------------------- uploaded (memory)
@@ -732,11 +842,12 @@ def render_uploaded_dashboard():
         )
         price_lo, price_hi = price_range
     else:
-        start_date = st.session_state.get("saved::up_start", d_min_all)
-        end_date = st.session_state.get("saved::up_end", d_max_all)
-        selected_products = st.session_state.get("saved::up_prods", [])
-        selected_categories = st.session_state.get("saved::up_cats", [])
-        price_lo, price_hi = st.session_state.get("saved::up_price", price_full)
+        # See the demo dashboard: `or` guards against the pre-seeded None.
+        start_date = st.session_state.get("saved::up_start") or d_min_all
+        end_date = st.session_state.get("saved::up_end") or d_max_all
+        selected_products = st.session_state.get("saved::up_prods") or []
+        selected_categories = st.session_state.get("saved::up_cats") or []
+        price_lo, price_hi = st.session_state.get("saved::up_price") or price_full
 
     # ---- apply filters in pandas (in-memory only) ----
     mask = (df["date"] >= pd.Timestamp(start_date)) & (
@@ -805,7 +916,19 @@ def render_uploaded_dashboard():
             '<div style="display:flex; gap:0.45rem; justify-content:flex-end;">'
             f"{chips}</div>"
         )
-        st.markdown(chip_row, unsafe_allow_html=True)
+        # Icon-only restore toggle while the panel is hidden (see the demo
+        # dashboard for the rationale) — without this the uploaded dashboard
+        # had no way to bring the filters back at all.
+        if not st.session_state.get("filters_visible", True):
+            restore_col, chip_col = st.columns([0.22, 0.78],
+                                               vertical_alignment="center")
+            with restore_col:
+                st.button("☷", type="tertiary", on_click=_toggle_filters,
+                          help="Show filters", key="restore_filters_up")
+            with chip_col:
+                st.markdown(chip_row, unsafe_allow_html=True)
+        else:
+            st.markdown(chip_row, unsafe_allow_html=True)
         up1, up2 = st.columns(2, gap="small")
         with up1:
             if st.button("♻️ Reset", use_container_width=True, key="hdr_reset_up"):
@@ -813,8 +936,11 @@ def render_uploaded_dashboard():
         with up2:
             if st.button("⬆️ Upload CSV", type="primary", use_container_width=True,
                          key="hdr_upload_up"):
+                # Clear params first so no stale ?source= is left in the URL
+                for key in list(st.query_params):
+                    del st.query_params[key]
                 st.session_state.page = "upload"
-                st.query_params.update({"page": "upload"})
+                st.query_params["page"] = "upload"
                 st.rerun()
 
     # ---- KPI cards (computed from the filtered upload) ----
